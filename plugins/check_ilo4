@@ -1,68 +1,137 @@
 #!/bin/bash
-# ILO4 Nagios check script v0.1
-# Last update 2016/03/09 tokaji.attila@gmail.com
-#Requires: ipmitool - Tested with ipmitool-1.8.11-21 on CentOS
-#License: CC BY-NC-SA 4.0
-#Usage: check_ilo4 <ilouser> <ilouserpassword> <iloIP or iloHostname>
+# ILO4 Nagios check script
+PROGNAME=$(basename $0)
+RELEASE="Revision 0.2.1"
+# Last update 2017/03/15 KAMI (kami911@gmail.com)
+# Update 2016/03/09 tokaji.attila@gmail.com
+#
+# Requires: ipmitool - Tested with ipmitool-1.8.11-21 on CentOS
+# License: CC BY-NC-SA 4.0 and GPL v3.0
+# Usage: check_ilo4 <ilouser> <ilouserpassword> <iloIP or iloHostname>
 
+# Nagios return codes
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+
+# Plugin variable description
+AUTHOR="by KAMI <kami911@gmail.com> based on a work from Attila Tokaji (tokaji.attila@gmail.com)"
+
+print_usage() {
+        echo ""
+        echo "$PROGNAME $RELEASE - HP ILO 4 modules check script for Nagios/Icinga"
+        echo ""
+        echo "Usage: $PROGNAME [flags]"
+        echo ""
+        echo "Flags:"
+        echo "  -H <hostname> : Hostname"
+        echo "  -u <username> : Username"
+        echo "  -p <password> : Password"
+        echo "  -h  Show this page"
+        echo ""
+        echo "Usage: $PROGNAME"
+        echo "Usage: $PROGNAME --help"
+        echo ""
+}
+
+print_help() {
+        print_usage
+        echo ""
+        echo "HP ILO 4 modules check script for Nagios/Icinga"
+        echo ""
+        exit $STATE_OK
+}
+
+# Parse parameters
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h | --help)
+            print_help
+            exit $STATE_OK
+            ;;
+        -v | --version)
+                print_release
+                exit $STATE_OK
+                ;;
+        -u | --username)
+               shift
+               USERNAME=$1
+                ;;
+        -p | --password)
+               shift
+               PASSWORD=$1
+                ;;
+        -H | --host)
+               shift
+               HOST=$1
+                ;;
+        *)  echo "Unknown argument: $1"
+            print_usage
+            exit $STATE_UNKNOWN
+            ;;
+        esac
+shift
+done
 
 TMPFILE=$(mktemp)
-ipmitool -I lanplus -U $1 -P $2 -H $3 chassis status>$TMPFILE
-
-
-retcode=0
-
-SystemPowerStatus=`cat $TMPFILE|grep "System Power"|awk -F ":" {'print $2'}`
-PowerOverloadStatus=`cat $TMPFILE|grep "Power Overload"|awk -F ":" {'print $2'}`
-MainPowerFaultStatus=`cat $TMPFILE|grep "Main Power Fault"|awk -F ":" {'print $2'}`
-PowerControlFaultStatus=`cat $TMPFILE|grep "Power Control Fault"|awk -F ":" {'print $2'}`
-LastPowerEventStatus=`cat $TMPFILE|grep "Last Power Event"|awk -F ":" {'print $2'}`
-DriveFaultStatus=`cat $TMPFILE|grep "Drive Fault"|awk -F ":" {'print $2'}`
-CoolingFanFaultStatus=`cat $TMPFILE|grep "Cooling/Fan Fault"|awk -F ":" {'print $2'}`
-
-if [ $SystemPowerStatus != "on" ];then
-POWER=`echo "[Power Status: not OK] "`
-retcode=1
+ipmitool -I lanplus -U $USERNAME -P $PASSWORD -H $HOST chassis status > $TMPFILE
+if [ $? != 0 ]
+then
+  retcode=${STATE_UNKNOWN}
 else
-POWER=`echo "[Power Status: OK] "`
+  SystemPowerStatus=`cat $TMPFILE|grep "System Power"|awk -F ":" {'print $2'}`
+  PowerOverloadStatus=`cat $TMPFILE|grep "Power Overload"|awk -F ":" {'print $2'}`
+  MainPowerFaultStatus=`cat $TMPFILE|grep "Main Power Fault"|awk -F ":" {'print $2'}`
+  PowerControlFaultStatus=`cat $TMPFILE|grep "Power Control Fault"|awk -F ":" {'print $2'}`
+  LastPowerEventStatus=`cat $TMPFILE|grep "Last Power Event"|awk -F ":" {'print $2'}`
+  DriveFaultStatus=`cat $TMPFILE|grep "Drive Fault"|awk -F ":" {'print $2'}`
+  CoolingFanFaultStatus=`cat $TMPFILE|grep "Cooling/Fan Fault"|awk -F ":" {'print $2'}`
+
+  if [ $SystemPowerStatus != "on" ]
+  then
+    POWER=`echo "[Power Status: not OK] "`
+    retcode=$STATE_WARNING
+  else
+    POWER=`echo "[Power Status: OK] "`
+  fi
+
+  if [ $PowerOverloadStatus != "false" ];then
+    POWEROVERLOAD=`echo "[Power Overload Status: not OK] "`
+    retcode=$STATE_CRITICAL
+  else
+    POWEROVERLOAD=`echo "[Power Overload Status: OK] "`
+  fi
+
+  if [ $MainPowerFaultStatus != "false" ];then
+    MAINPOWER=`echo "[Main Power Status: not OK] "`
+    retcode=$STATE_CRITICAL
+  else
+    MAINPOWER=`echo "[Main Power Status: OK] "`
+  fi
+
+  if [ $PowerControlFaultStatus != "false" ];then
+    POWERCONTROL=`echo "[Power Control Status: not OK] "`
+    retcode=$STATE_CRITICAL
+  else
+    POWERCONTROL=`echo "[Power Control Status: OK] "`
+  fi
+
+  if [ $DriveFaultStatus != "false" ];then
+    DRIVE=`echo "[Drive Status: not OK] "`
+    retcode=$STATE_CRITICAL
+  else
+    DRIVE=`echo "[Drive Status: OK] "`
+  fi
+
+  if [ $CoolingFanFaultStatus != "false" ];then
+    COOLING=`echo "[Cooling/Fan Status: not OK]"`
+    retcode=$STATE_CRITICAL
+  else
+   COOLING=`echo "[Cooling/Fan Status: OK]"`
+  fi
+
+  echo $POWER $POWEROVERLOAD $MAINPOWER $POWERCONTROL $DRIVE $COOLING
 fi
-
-if [ $PowerOverloadStatus != "false" ];then
-POWEROVERLOAD=`echo "[Power Overload Status: not OK] "`
-retcode=2
-else
-POWEROVERLOAD=`echo "[Power Overload Status: OK] "`
-fi
-
-if [ $MainPowerFaultStatus != "false" ];then
-MAINPOWER=`echo "[Main Power Status: not OK] "`
-retcode=2
-else
-MAINPOWER=`echo "[Main Power Status: OK] "`
-fi
-
-if [ $PowerControlFaultStatus != "false" ];then
-POWERCONTROL=`echo "[Power Control Status: not OK] "`
-retcode=2
-else
-POWERCONTROL=`echo "[Power Control Status: OK] "`
-fi
-
-if [ $DriveFaultStatus != "false" ];then
-DRIVE=`echo "[Drive Status: not OK] "`
-retcode=2
-else
-DRIVE=`echo "[Drive Status: OK] "`
-fi
-
-if [ $CoolingFanFaultStatus != "false" ];then
-COOLING=`echo "[Cooling/Fan Status: not OK]"`
-retcode=2
-else
-COOLING=`echo "[Cooling/Fan Status: OK]"`
-fi
-
-echo $POWER $POWEROVERLOAD $MAINPOWER $POWERCONTROL $DRIVE $COOLING
-
-exit $retcode
 rm $TMPFILE
+exit $retcode

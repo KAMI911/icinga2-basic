@@ -90,48 +90,48 @@ else
 
   if [ $SystemPowerStatus != "on" ]
   then
-    POWER=`echo "[Power Status: not OK] "`
+    POWER=`echo "Power Status: [WARNING]"`
     retcode=$STATE_WARNING
   else
-    POWER=`echo "[Power Status: OK] "`
+    POWER=`echo "Power Status: [OK]"`
   fi
 
   if [ $PowerOverloadStatus != "false" ];then
-    POWEROVERLOAD=`echo "[Power Overload Status: not OK] "`
+    POWEROVERLOAD=`echo "Power Overload Status: [WARNING]"`
     retcode=$STATE_CRITICAL
   else
-    POWEROVERLOAD=`echo "[Power Overload Status: OK] "`
+    POWEROVERLOAD=`echo "Power Overload Status: [OK]"`
   fi
 
   if [ $MainPowerFaultStatus != "false" ];then
-    MAINPOWER=`echo "[Main Power Status: not OK] "`
+    MAINPOWER=`echo "Main Power Status: [WARNING]"`
     retcode=$STATE_CRITICAL
   else
-    MAINPOWER=`echo "[Main Power Status: OK] "`
+    MAINPOWER=`echo "Main Power Status: [OK]"`
   fi
 
   if [ $PowerControlFaultStatus != "false" ];then
-    POWERCONTROL=`echo "[Power Control Status: not OK] "`
+    POWERCONTROL=`echo "Power Control Status: [WARNING]"`
     retcode=$STATE_CRITICAL
   else
-    POWERCONTROL=`echo "[Power Control Status: OK] "`
+    POWERCONTROL=`echo "Power Control Status: [OK]"`
   fi
 
   if [ $DriveFaultStatus != "false" ];then
-    DRIVE=`echo "[Drive Status: not OK] "`
+    DRIVE=`echo "Drive Status: [WARNING]"`
     retcode=$STATE_CRITICAL
   else
-    DRIVE=`echo "[Drive Status: OK] "`
+    DRIVE=`echo "Drive Status: [OK]"`
   fi
 
   if [ $CoolingFanFaultStatus != "false" ];then
-    COOLING=`echo "[Cooling/Fan Status: not OK]"`
+    COOLING=`echo "Cooling/Fan Status: [WARNING]"`
     retcode=$STATE_CRITICAL
   else
-   COOLING=`echo "[Cooling/Fan Status: OK]"`
+   COOLING=`echo "Cooling/Fan Status: [OK]"`
   fi
 
-  echo $POWER $POWEROVERLOAD $MAINPOWER $POWERCONTROL $DRIVE $COOLING
+  echo $POWER, $POWEROVERLOAD, $MAINPOWER, $POWERCONTROL, $DRIVE, $COOLING
 fi
 rm $TMPFILE
 exit $retcode
